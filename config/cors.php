@@ -8,7 +8,8 @@ return [
         'http://localhost:5174',
         'http://varticameta.s3-website.us-east-2.amazonaws.com',
         'https://rmgdbkm3-8000.usw3.devtunnels.ms',
-        'https://gasparvaldez.github.io/varticaenvironments'
+        'https://gasparvaldez.github.io/varticaenvironments',
+        'https://backend-z57u.onrender.com',
         
     ],
     'allowed_origins_patterns' => [],
