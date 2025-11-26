@@ -34,64 +34,61 @@ class AuctionController extends Controller
     }
 
     // Método para crear una nueva subasta
-    public function store(Request $request)
+     public function store(Request $request)
     {
-        $this->authorize('create', Auction::class);
-
+        // 2. Validar datos recibidos del formulario
         $validated = $request->validate([
-            'obra_id' => 'required|exists:obras,id',
-            'precio_inicial' => 'required|numeric|min:0',
+            'obra_id'           => 'required|exists:obras,id',
+            'precio_inicial'    => 'required|numeric|min:1',
             'incremento_minimo' => 'required|numeric|min:1',
-            'duracion_dias' => 'nullable|integer|min:1|max:30',
-            'fecha_fin_custom' => 'nullable|date|after:now',
-            'fecha_inicio' => 'nullable|date|after_or_equal:now',
+            'fecha_inicio'      => 'required|date|after:now',
+            'fecha_fin'         => 'required|date|after:fecha_inicio',
         ]);
 
-        $obra = \App\Models\Obra::find($validated['obra_id']);
-        if (!$obra || $obra->estatus_id != 2 || $obra->es_subastable != 1) {
-            return response()->json([
-                'error' => 'Solo se pueden subastar obras aceptadas (aprobadas).'
-            ], 400);
+        // 3. Comprobar que SOLO el admin puede crear subastas (AuctionPolicy)
+        $user = Auth::user();
+        if (!$user || $user->role !== 'Admin') {
+            return response()->json(['error' => 'No autorizado'], 403);
         }
 
-        $fechaInicio = !empty($validated['fecha_inicio'])
-            ? Carbon::parse($validated['fecha_inicio'])
-            : Carbon::now();
+        // 4. Checar obra: que esté aceptada y subastable y que NO tenga subasta activa o programada
+        $obra = Obra::find($validated['obra_id']);
 
-        if (!empty($validated['fecha_fin_custom'])) {
-            $fechaFin = Carbon::parse($validated['fecha_fin_custom']);
-        } elseif (!empty($validated['duracion_dias'])) {
-            $fechaFin = $fechaInicio->copy()->addDays($validated['duracion_dias']);
-        } else {
-            return response()->json([
-                'error' => 'Debes proporcionar duracion_dias o fecha_fin_custom'
-            ], 400);
+        if (!$obra || $obra->estatus_id != 2 || !$obra->es_subastable) {
+            return response()->json(['error' => 'La obra no es aceptada o no está marcada como subastable'], 400);
         }
 
-        if ($this->hasDateConflict($validated['obra_id'], $fechaInicio, $fechaFin)) {
-            return response()->json([
-                'error' => 'Conflicto: ya existe una subasta activa o programada para esta obra en ese rango de fechas'
-            ], 400);
+        // 5. Revisar que no haya otra subasta activa o programada para esa obra
+        $subastaExistente = Auction::where('obra_id', $obra->id)
+            ->whereIn('estado', ['programada', 'activa'])
+            ->where(function ($q) use ($validated) {
+                $q->where(function ($q2) use ($validated) {
+                    // se traslapan en algún momento los periodos de subasta
+                    $q2->where('fecha_inicio', '<', $validated['fecha_fin'])
+                       ->where('fecha_fin',   '>', $validated['fecha_inicio']);
+                });
+            })
+            ->first();
+
+        if ($subastaExistente) {
+            return response()->json(['error' => 'Ya existe una subasta activa o programada para esta obra en ese periodo.'], 400);
         }
 
-        $estado = $fechaInicio->isFuture() ? 'programada' : 'activa';
-
+        // 6. Crear la subasta como "programada"
         $auction = Auction::create([
-            'obra_id' => $validated['obra_id'],
-            'precio_inicial' => $validated['precio_inicial'],
-            'precio_actual' => $validated['precio_inicial'],
+            'obra_id'           => $validated['obra_id'],
+            'precio_inicial'    => $validated['precio_inicial'],
+            'precio_actual'     => $validated['precio_inicial'],
             'incremento_minimo' => $validated['incremento_minimo'],
-            'fecha_inicio' => $fechaInicio,
-            'fecha_fin' => $fechaFin,
-            'estado' => $estado,
+            'fecha_inicio'      => $validated['fecha_inicio'],
+            'fecha_fin'         => $validated['fecha_fin'],
+            'estado'            => 'programada', // siempre programada si fecha_inicio > now()
         ]);
 
-        $auction->load('obra');
-        // Notification::send(User::where(...), new NewAuctionCreated($auction));
-
+        // 7. Respuesta exitosa
         return response()->json([
-            'message' => 'Subasta creada exitosamente',
-            'auction' => $auction
+            'message' => 'Subasta programada creada correctamente.',
+            'auction' => $auction,
         ], 201);
     }
 
