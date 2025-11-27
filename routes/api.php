@@ -10,7 +10,7 @@ use App\Http\Controllers\AreasController;
 use App\Http\Controllers\Api\ObraController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\AuctionController;
-
+use App\Http\Controllers\Api\UnityFilesController;
 
 use Firebase\JWT\JWT;
 
@@ -74,6 +74,11 @@ Route::get('/auctions', [AuctionController::class, 'index']);
  * Ejemplo: GET /api/auctions/1
  */
 Route::get('/auctions/{id}', [AuctionController::class, 'show']);
+
+
+
+
+Route::get('/unity-files', [UnityFilesController::class, 'getUnityFiles']);
 
 // ==========================================
 // RUTAS PROTEGIDAS (requieren token)

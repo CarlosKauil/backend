@@ -40,5 +40,11 @@ return [
         'url' => env('METABASE_URL'),
         'secret' => env('METABASE_SECRET'),
     ],
+        'b2' => [
+        'key_id' => env('B2_KEY_ID'),
+        'app_key' => env('B2_APP_KEY'),
+        'bucket_id' => env('B2_BUCKET_ID'),
+        'bucket_name' => env('B2_BUCKET_NAME'),
+    ],
 
 ];
