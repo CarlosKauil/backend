@@ -47,4 +47,11 @@ return [
         'bucket_name' => env('B2_BUCKET_NAME'),
     ],
 
+    'superset' => [
+        'base_url'  => env('SUPERSET_BASE_URL', 'http://localhost:8088'),
+        'username'  => env('SUPERSET_USERNAME'),
+        'password'  => env('SUPERSET_PASSWORD'),
+        'dashboard_id' => env('SUPERSET_DASHBOARD_ID'),
+    ],
+
 ];

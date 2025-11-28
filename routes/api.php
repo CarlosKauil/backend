@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\ObraController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\AuctionController;
 use App\Http\Controllers\Api\UnityFilesController;
+use App\Http\Controllers\SupersetController;
 
 use Firebase\JWT\JWT;
 
@@ -20,6 +21,7 @@ use Firebase\JWT\JWT;
 
 
 
+Route::get('/superset/guest-token', [SupersetController::class, 'getGuestToken']);
 // ==========================================
 // RUTAS PÚBLICAS (sin autenticación)
 // ==========================================
@@ -74,6 +76,7 @@ Route::get('/auctions', [AuctionController::class, 'index']);
  * Ejemplo: GET /api/auctions/1
  */
 Route::get('/auctions/{id}', [AuctionController::class, 'show']);
+
 
 
 

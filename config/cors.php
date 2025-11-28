@@ -10,6 +10,7 @@ return [
         'https://rmgdbkm3-8000.usw3.devtunnels.ms',
         'https://gasparvaldez.github.io/varticaenvironments',
         'https://backend-z57u.onrender.com',
+        'http://localhost:8088',
         
     ],
     'allowed_origins_patterns' => [],
