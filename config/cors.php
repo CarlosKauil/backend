@@ -9,9 +9,9 @@ return [
         'http://localhost:5174',
         'http://localhost:8088',
         'http://localhost:8000',
-        'https://gasparvaldez.github.io',
         'https://backend-z57u.onrender.com',
         'https://rmgdbkm3-8000.usw3.devtunnels.ms',
+        'https://vtc-back.pages.dev',
     ],
 
     'allowed_origins_patterns' => [],
