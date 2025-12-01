@@ -8,6 +8,7 @@ use App\Models\Obra;
 use App\Models\EstatusObra;
 use App\Models\MensajeRechazo;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class ObraController extends Controller
 {
@@ -92,10 +93,15 @@ class ObraController extends Controller
     }
 
     // Subir una nueva obra (solo artista)
-    public function store(Request $request)
+   public function store(Request $request)
     {
         try {
             $areaId = (int) $request->input('area_id');
+            Log::info("Iniciando registro de obra para el área: {$areaId}", [
+                'user_id' => optional($request->user())->id,
+                'input' => $request->all()
+            ]);
+
             // VALIDACIÓN SEGÚN ÁREA Y ARCHIVOS
             $rules = [
                 'nombre' => 'required|string|max:255',
@@ -107,36 +113,38 @@ class ObraController extends Controller
                 'precio_subasta' => 'nullable|numeric|min:0',
             ];
 
-            // Nuevo: genero_tecnica requerido para música, modelado y pintura
             if (in_array($areaId, [1, 2, 4])) {
                 $rules['genero_tecnica'] = 'required|string|max:17';
             }
 
-            if ($areaId === 3) { // Literatura
-                $rules['libro'] = 'required|file|mimes:pdf|max:20480'; // Máximo 20MB
+            if ($areaId === 3) {
+                $rules['libro'] = 'required|file|mimes:pdf|max:20480';
             } else {
-                $rules['archivo'] = 'required|file|max:10240'; // Otros archivos 10MB
+                $rules['archivo'] = 'required|file|max:10240';
             }
 
             $request->validate($rules);
+            Log::info("Validación exitosa para usuario: {$request->user()->id}");
 
             $user = $request->user();
             if (!$user) {
+                Log::warning("Usuario no autenticado intentó subir obra", ['request_ip' => $request->ip()]);
                 return response()->json(['message' => 'Usuario no autenticado'], 401);
             }
 
-            // --- LÍMITES DE OBRAS POR ÁREA ---
+            // LÍMITES DE OBRAS POR ÁREA
             $limites = [
-                3 => 6,    // Literatura
-                4 => 29,   // Pintura
-                2 => 10,   // Música
-                1 => 22,   // Modelado
+                3 => 6,
+                4 => 29,
+                2 => 10,
+                1 => 22,
             ];
 
             $limite = $limites[$areaId] ?? null;
             if ($limite !== null) {
                 $obrasExistentes = Obra::where('area_id', $areaId)->count();
                 if ($obrasExistentes >= $limite) {
+                    Log::info("Límite de obras alcanzado para área {$areaId}", ['usuario_id' => $user->id]);
                     return response()->json([
                         'message' => 'Se alcanzó el límite máximo de obras en esta área.'
                     ], 400);
@@ -158,11 +166,13 @@ class ObraController extends Controller
             if ($areaId === 3) {
                 $libro = $request->file('libro');
                 $nombreLibro = uniqid('libro_') . '.' . $libro->getClientOriginalExtension();
-                $libroPath = $libro->storeAs("obras/literatura", $nombreLibro, 'public');
+                $libroPath = $libro->storeAs("obras/literatura", $nombreLibro, 'b2');
+                Log::info("Archivo de libro subido", ['path' => $libroPath, 'usuario_id' => $user->id]);
             } else {
                 $archivo = $request->file('archivo');
                 $nombreArchivo = uniqid('obra_') . '.' . $archivo->getClientOriginalExtension();
-                $archivoPath = $archivo->storeAs("obras/$carpeta", $nombreArchivo, 'public');
+                $archivoPath = $archivo->storeAs("obras/$carpeta", $nombreArchivo, 'b2');
+                Log::info("Archivo de obra subido", ['path' => $archivoPath, 'usuario_id' => $user->id]);
             }
 
             // CREAR OBRA
@@ -172,15 +182,17 @@ class ObraController extends Controller
                 'nombre' => $request->nombre,
                 'descripcion' => $request->descripcion,
                 'anio_creacion' => $request->anio_creacion,
-                'genero_tecnica' => $request->genero_tecnica, // <-- SE GUARDA AQUÍ
+                'genero_tecnica' => $request->genero_tecnica,
                 'archivo' => $archivoPath,
                 'libro' => $libroPath,
                 'area_id' => $areaId,
-                'estatus_id' => 1, // Pendiente por defecto
+                'estatus_id' => 1,
                 'es_subastable' => $request->es_subastable,
                 'precio' => $request->precio,
                 'precio_subasta' => $request->precio_subasta,
             ]);
+
+            Log::info("Obra creada correctamente", ['obra_id' => $obra->id, 'usuario_id' => $user->id]);
 
             $obrasAceptadas = Obra::with(['user', 'area', 'estatus'])
                 ->where('estatus_id', 2)
@@ -201,11 +213,13 @@ class ObraController extends Controller
             ], 201);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning("Error de validación al registrar obra", ['errors' => $e->errors()]);
             return response()->json([
                 'message' => 'Error de validación',
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
+            Log::error("Excepción al registrar obra", ['error' => $e->getMessage(), 'line' => $e->getLine()]);
             return response()->json([
                 'message' => 'Error al registrar la obra',
                 'error' => $e->getMessage(),

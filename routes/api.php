@@ -13,13 +13,15 @@ use App\Http\Controllers\Api\AuctionController;
 use App\Http\Controllers\Api\UnityFilesController;
 use App\Http\Controllers\SupersetController;
 
+use App\Http\Controllers\Api\SubscriptionController;
+
 use Firebase\JWT\JWT;
 
 /*use App\Http\Controllers\Auth\FirebaseAuthController;
 */
 
 
-
+Route::get('/plans', [SubscriptionController::class, 'indexPlans']);
 
 Route::get('/superset/guest-token', [SupersetController::class, 'getGuestToken']);
 // ==========================================
@@ -88,6 +90,12 @@ Route::get('/unity-files', [UnityFilesController::class, 'getUnityFiles']);
 // ==========================================
 
 Route::middleware('auth:sanctum')->group(function () {
+
+
+    Route::get('/subscription/me', [SubscriptionController::class, 'mySubscription']);
+    Route::post('/subscription/change-plan', [SubscriptionController::class, 'changePlan']);
+    Route::post('/subscription/cancel', [SubscriptionController::class, 'cancel']);
+    Route::get('/admin/subscriptions', [SubscriptionController::class, 'adminIndex']);
     
     // ------------------------------------------
     // USUARIO Y AUTENTICACIÓN

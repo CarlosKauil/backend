@@ -4,6 +4,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute; // 👈 Importación requerida
+use Illuminate\Support\Facades\Storage; // 👈 Importación requerida
 
 class Obra extends Model
 {
@@ -21,7 +22,7 @@ class Obra extends Model
             // La función toma el valor del campo 'archivo' (ej: obras/modelado/file.glb)
             // y lo convierte en una URL pública (ej: http://localhost:8000/storage/obras/modelado/file.glb)
             fn (mixed $value, array $attributes) => $attributes['archivo'] 
-                ? asset('storage/' . $attributes['archivo'])
+                ? storage::disk('b2')->temporaryUrl($attributes['archivo'], now()->addMinutes(5))
                 : null,
         );
     }
