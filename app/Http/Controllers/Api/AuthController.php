@@ -13,6 +13,7 @@ use App\Models\Artist;
 class AuthController extends Controller
 {
 
+    // Método para listar todos los usuarios (solo para pruebas)
     public function index()
     {
         $user = User::all();
