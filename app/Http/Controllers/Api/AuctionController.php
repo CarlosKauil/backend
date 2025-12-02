@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Auction;
 use App\Models\Bid;
+use App\Models\Obra;
+
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 // use Illuminate\Support\Facades\Notification;
@@ -36,19 +39,30 @@ class AuctionController extends Controller
     // Método para crear una nueva subasta
      public function store(Request $request)
     {
+         // 3. Comprobar que SOLO el admin puede crear subastas (AuctionPolicy)
+        $user = Auth::user();
+        if (!$user || $user->role !== 'Admin') {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
         // 2. Validar datos recibidos del formulario
         $validated = $request->validate([
             'obra_id'           => 'required|exists:obras,id',
             'precio_inicial'    => 'required|numeric|min:1',
             'incremento_minimo' => 'required|numeric|min:1',
-            'fecha_inicio'      => 'required|date|after:now',
+            'fecha_inicio'      => 'required|date|after_or_equal:now',
             'fecha_fin'         => 'required|date|after:fecha_inicio',
         ]);
 
-        // 3. Comprobar que SOLO el admin puede crear subastas (AuctionPolicy)
-        $user = Auth::user();
-        if (!$user || $user->role !== 'Admin') {
-            return response()->json(['error' => 'No autorizado'], 403);
+       
+        // ✅ Convertir fechas a Carbon para comparaciones precisas
+        $fechaInicio = Carbon::parse($validated['fecha_inicio']);
+        $fechaFin = Carbon::parse($validated['fecha_fin']);
+
+        // Verificar que la fecha de inicio sea futura
+        if ($fechaInicio->isPast()) {
+            return response()->json([
+                'error' => 'La fecha de inicio debe ser en el futuro'
+            ], 422);
         }
 
         // 4. Checar obra: que esté aceptada y subastable y que NO tenga subasta activa o programada
@@ -57,6 +71,7 @@ class AuctionController extends Controller
         if (!$obra || $obra->estatus_id != 2 || !$obra->es_subastable) {
             return response()->json(['error' => 'La obra no es aceptada o no está marcada como subastable'], 400);
         }
+       
 
         // 5. Revisar que no haya otra subasta activa o programada para esa obra
         $subastaExistente = Auction::where('obra_id', $obra->id)
@@ -70,8 +85,11 @@ class AuctionController extends Controller
             })
             ->first();
 
-        if ($subastaExistente) {
-            return response()->json(['error' => 'Ya existe una subasta activa o programada para esta obra en ese periodo.'], 400);
+         // Revisar conflictos de fechas
+        if ($this->hasDateConflict($obra->id, $fechaInicio, $fechaFin)) {
+            return response()->json([
+                'error' => 'Ya existe una subasta activa o programada para esta obra en ese periodo.'
+            ], 400);
         }
 
         // 6. Crear la subasta como "programada"

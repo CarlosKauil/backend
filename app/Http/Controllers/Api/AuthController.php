@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
+
 use App\Models\User;
 use App\Models\Artist;
 
@@ -97,31 +99,27 @@ class AuthController extends Controller
         ]);
     }
 
+    /** */
+
     // Método para iniciar sesión
     public function login(Request $request)
     {
-        // Validación de los campos necesarios para el login
+            // Validación
         $request->validate([
-            'email' => 'required|email', // Email requerido y con formato válido
-            'password' => 'required', // Contraseña requerida
+            'email' => 'required|email',
+            'password' => 'required',
         ]);
 
-        // Buscar el usuario por su dirección de email
-        $user = User::where('email', $request->email)->first();
-
-        // Verificar que el usuario exista y que la contraseña sea correcta
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            // Si las credenciales son incorrectas, se retorna error 401 (no autorizado)
+        // Intento de login
+        if (!Auth::attempt($request->only('email', 'password'))) {
             return response()->json(['message' => 'Credenciales incorrectas'], 401);
         }
 
-        // Generación del token de acceso para el usuario autenticado
-        $token = $user->createToken('token')->plainTextToken;
+        // Login exitoso
+        $user = $request->user();
 
-        // Respuesta con los datos del usuario y el token generado
         return response()->json([
-            'user' => $user,
-            'token' => $token,
+            'user' => $user
         ]);
     }
 

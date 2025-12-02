@@ -28,18 +28,7 @@ Route::get('/superset/guest-token', [SupersetController::class, 'getGuestToken']
 // RUTAS PÚBLICAS (sin autenticación)
 // ==========================================
 
-/**
- * Login con Firebase
- */
-/*
-Route::post('/firebase-login', [App\Http\Controllers\Auth\FirebaseLoginController::class, 'login']);
-*/
-/**
- * Ruta de prueba
- */
-Route::get('/ping', function () {
-    return response()->json(['message' => 'pong']);
-});
+
 
 /**
  * Áreas (CRUD básico)
@@ -53,14 +42,10 @@ Route::post('/register', [AuthController::class, 'register']);           // Regi
 Route::post('/artist-register', [AuthController::class, 'artistRegister']); // Autoregistro de artista
 Route::post('/login', [AuthController::class, 'login']);                 // Login
 
-/**
- * Obras públicas (sin login)
- */
+/** Obras públicas (sin login)*/
 Route::get('/obras/aceptadas-public/{area_id}', [ObraController::class, 'aceptadasPublic']);
 
-/**
- * Perfil público del artista (Visualización)
- */
+/** Perfil público del artista (Visualización)*/
 Route::get('/artist/{link}', [ProfileController::class, 'showProfile']);
 
 // ==========================================
@@ -72,16 +57,11 @@ Route::get('/artist/{link}', [ProfileController::class, 'showProfile']);
  * Cualquier usuario puede ver las subastas sin autenticarse
  */
 Route::get('/auctions', [AuctionController::class, 'index']);
-
 /**
  * Ver detalle de una subasta específica
  * Ejemplo: GET /api/auctions/1
  */
 Route::get('/auctions/{id}', [AuctionController::class, 'show']);
-
-
-
-
 
 Route::get('/unity-files', [UnityFilesController::class, 'getUnityFiles']);
 
@@ -101,19 +81,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // USUARIO Y AUTENTICACIÓN
     // ------------------------------------------
     
-    /**
-     * Obtener usuario autenticado
-     */
+    /** Obtener usuario autenticado*/
     Route::get('/user', [AuthController::class, 'user']);
-    
-    /**
-     * Ruta solo para admin
-     */
+    /** Ruta solo para admin */
     Route::get('/admin-only', [AuthController::class, 'adminOnly']);
-    
-    /**
-     * Logout
-     */
+    /** Logout */
     Route::post('/logout', [AuthController::class, 'logout']);
     
     /**
@@ -124,33 +96,18 @@ Route::middleware('auth:sanctum')->group(function () {
     // ------------------------------------------
     // GESTIÓN DE OBRAS
     // ------------------------------------------
-    
-    /**
-     * Artista sube obra
-     */
+    /** Artista sube obra*/
     Route::post('/obras', [ObraController::class, 'store']);
-    
-    /**
-     * Listar obras (admin o artista)
-     */
+    /** Listar obras (admin o artista)*/
     Route::get('/obras', [ObraController::class, 'index']);
-    
-    /**
-     * ✅ RUTAS ESPECÍFICAS PRIMERO (antes de rutas con parámetros)
-     */
+    /** RUTAS ESPECÍFICAS PRIMERO (antes de rutas con parámetros)*/
     Route::get('/obras/pendientes', [ObraController::class, 'pendientes']); // Admin ve pendientes
     Route::get('/obras/aceptadas', [ObraController::class, 'aceptadas']);   // Obras aceptadas
-    
-    /**
-     * ✅ RUTAS CON PARÁMETROS DESPUÉS
-     */
+    /** RUTAS CON PARÁMETROS DESPUÉS*/
     Route::get('/obras/{id}', [ObraController::class, 'show']);             // Ver obra
     Route::put('/obras/{id}', [ObraController::class, 'update']);           // Admin acepta/rechaza
     Route::delete('/obras/{id}', [ObraController::class, 'destroy']);       // Admin elimina obra
-
-    /**
-     * Notificaciones y obras aprobadas
-     */
+    /** Notificaciones y obras aprobadas*/
     Route::get('/notifications/rejections', [ObraController::class, 'getRejectionMessages']);
     Route::get('/obras-pendientes', [ObraController::class, 'getNewPendingObras']);
     Route::get('/obras-aprobadas', [ObraController::class, 'obrasAprobadas']);
@@ -158,67 +115,36 @@ Route::middleware('auth:sanctum')->group(function () {
     // ------------------------------------------
     // PERFIL
     // ------------------------------------------
-    
-    /**
-     * Obtener perfil del usuario autenticado
-     */
+    /**Obtener perfil del usuario autenticado*/
     Route::get('/profile', [ProfileController::class, 'getProfile']);
-    
-    /**
-     * Actualizar perfil
-     */
+    /**Actualizar perfil*/
     Route::put('/profile', [ProfileController::class, 'updateProfile']);
-
     // ------------------------------------------
     // METABASE / DASHBOARD
     // ------------------------------------------
     
-    /**
-     * Dashboard de Vartica
-     */
-   
-
+    /**Dashboard de Vartica*/
+    
     // ------------------------------------------
     // 🆕 SUBASTAS - RUTAS PROTEGIDAS
     // ------------------------------------------
-    
-    /**
-     * Crear una nueva subasta
-     * Body JSON:
-     * {
-     *   "obra_id": 1,
-     *   "precio_inicial": 1000.00,
-     *   "incremento_minimo": 100.00,
-     *   "duracion_dias": 7
-     * }
-     */
+    /**Crear una nueva subasta*/
     Route::post('/auctions', [AuctionController::class, 'store']);
-    
-    /**
-     * Realizar una puja en una subasta
-     * Ejemplo: POST /api/auctions/1/bid
-     * Body JSON:
-     * {
-     *   "monto": 1500.00
-     * }
-     */
+    /** Realizar una puja en una subasta*/
     Route::post('/auctions/{id}/bid', [AuctionController::class, 'placeBid']);
-    
-    /**
-     * Finalizar una subasta manualmente (antes de tiempo)
-     * Ejemplo: POST /api/auctions/1/finalize
-     */
+    /**Finalizar una subasta manualmente (antes de tiempo) */
     Route::post('/auctions/{id}/finalize', [AuctionController::class, 'finalize']);
-    
     /**
      * Cancelar una subasta (solo si no tiene pujas)
      * Ejemplo: POST /api/auctions/1/cancel
      */
     Route::post('/auctions/{id}/cancel', [AuctionController::class, 'cancel']);
-
+    /**
+     * Obtener todas las subastas públicas
+     * Similar a /auctions pero con detalles limitados
+     */
     Route::get('/auctions/public', [AuctionController::class, 'publicAuctions']);
 
-    
     /**
      * Obtener todas las pujas del usuario autenticado
      * Permite ver el historial de pujas realizadas

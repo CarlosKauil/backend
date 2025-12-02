@@ -22,7 +22,7 @@ class Obra extends Model
             // La función toma el valor del campo 'archivo' (ej: obras/modelado/file.glb)
             // y lo convierte en una URL pública (ej: http://localhost:8000/storage/obras/modelado/file.glb)
             fn (mixed $value, array $attributes) => $attributes['archivo'] 
-                ? storage::disk('b2')->temporaryUrl($attributes['archivo'], now()->addMinutes(5))
+                ? storage::disk('b2')->temporaryUrl($attributes['archivo'], now()->addMinutes(15))
                 : null,
         );
     }

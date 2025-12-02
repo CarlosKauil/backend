@@ -20,6 +20,12 @@ Route::get('/archivo/{path}', function ($path) {
 })->where('path', '.*');
 
 
+Route::get('/sanctum/csrf-cookie', function () {
+    return response()->noContent();
+});
+
+
+
 Route::get('/', function () {
     return view('welcome');
 });
