@@ -57,14 +57,10 @@ Route::post('/register', [AuthController::class, 'register']);           // Regi
 Route::post('/artist-register', [AuthController::class, 'artistRegister']); // Autoregistro de artista
 Route::post('/login', [AuthController::class, 'login']);                 // Login
 
-/**
- * Obras públicas (sin login)
- */
+/** Obras públicas (sin login)*/
 Route::get('/obras/aceptadas-public/{area_id}', [ObraController::class, 'aceptadasPublic']);
 
-/**
- * Perfil público del artista (Visualización)
- */
+/** Perfil público del artista (Visualización)*/
 Route::get('/artist/{link}', [ProfileController::class, 'showProfile']);
 
 // ==========================================
@@ -76,7 +72,6 @@ Route::get('/artist/{link}', [ProfileController::class, 'showProfile']);
  * Cualquier usuario puede ver las subastas sin autenticarse
  */
 Route::get('/auctions', [AuctionController::class, 'index']);
-
 /**
  * Ver detalle de una subasta específica
  * Ejemplo: GET /api/auctions/1
@@ -142,24 +137,13 @@ Route::middleware('auth:sanctum')->group(function () {
     
     /**Actualizar perfil*/
     Route::put('/profile', [ProfileController::class, 'updateProfile']);
-
     // ------------------------------------------
     // METABASE / DASHBOARD  Dashboard de Vartica
     // ------------------------------------------
     // ------------------------------------------
     // 🆕 SUBASTAS - RUTAS PROTEGIDAS
     // ------------------------------------------
-    
-    /**
-     * Crear una nueva subasta
-     * Body JSON:
-     * {
-     *   "obra_id": 1,
-     *   "precio_inicial": 1000.00,
-     *   "incremento_minimo": 100.00,
-     *   "duracion_dias": 7
-     * }
-     */
+    /**Crear una nueva subasta*/
     Route::post('/auctions', [AuctionController::class, 'store']);
     /**
      * Realizar una puja en una subasta

@@ -9,6 +9,7 @@ use App\Models\Auction;
 use App\Models\Bid;
 use App\Models\Obra;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
