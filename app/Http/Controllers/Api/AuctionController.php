@@ -166,10 +166,21 @@ class AuctionController extends Controller
 
     public function show($id)
     {
-        // Incluimos 'obra.area' para los iconos del frontend
-        $auction = Auction::with(['obra.artist.user', 'obra.area', 'bids.user', 'ganador'])
-            ->find($id);
+        // Relaciones que necesitamos
+        $relations = ['obra.artist.user', 'obra.area', 'bids.user', 'ganador'];
 
+        // 1. Intento buscar por ID de SUBASTA (lo normal)
+        $auction = Auction::with($relations)->find($id);
+
+        // 2. Si es null, intento buscar por ID de OBRA (tu caso actual)
+        if (!$auction) {
+            $auction = Auction::with($relations)
+                ->where('obra_id', $id)
+                ->latest() // Por si esa obra ha tenido varias subastas, toma la última
+                ->first();
+        }
+
+        // 3. Si sigue sin encontrar nada, entonces sí es un 404 real
         if (!$auction) {
             return response()->json([
                 'error' => 'Subasta no encontrada'
