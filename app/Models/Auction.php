@@ -27,7 +27,10 @@ class Auction extends Model
         'fecha_inicio',      // Cuándo inicia la subasta
         'fecha_fin',         // Cuándo termina la subasta
         'estado',            // Estado: programada, activa, finalizada, cancelada
-        'ganador_id'         // ID del usuario ganador (NULL si aún no termina)
+        'ganador_id',     // ID del usuario ganador (NULL si aún no termina)
+        'pago_status',
+        'fecha_pago',
+        'transaccion_id'
     ];
 
     /**
@@ -87,8 +90,7 @@ class Auction extends Model
      */
     public function isActiva()
     {
-        return $this->estado === 'activa' 
-            && Carbon::now()->between($this->fecha_inicio, $this->fecha_fin);
+        return $this->estado === 'activa';
     }
 
     /**
@@ -134,4 +136,10 @@ class Auction extends Model
     {
         return $this->bids()->where('user_id', $userId)->exists();
     }
+    
+
+
+ 
+
+    
 }

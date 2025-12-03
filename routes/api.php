@@ -13,17 +13,20 @@ use App\Http\Controllers\Api\AuctionController;
 use App\Http\Controllers\Api\UnityFilesController;
 use App\Http\Controllers\SupersetController;
 
-use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\PaymentController;
 
+use App\Http\Controllers\PresetController;
+use App\Http\Controllers\Api\SubscriptionController;
 use Firebase\JWT\JWT;
 
 /*use App\Http\Controllers\Auth\FirebaseAuthController;
 */
 
 
+
 Route::get('/plans', [SubscriptionController::class, 'indexPlans']);
 
-Route::get('/superset/guest-token', [SupersetController::class, 'getGuestToken']);
+
 // ==========================================
 // RUTAS PÚBLICAS (sin autenticación)
 // ==========================================
@@ -34,6 +37,7 @@ Route::get('/superset/guest-token', [SupersetController::class, 'getGuestToken']
 /*
 Route::post('/firebase-login', [App\Http\Controllers\Auth\FirebaseLoginController::class, 'login']);
 */
+Route::post('/preset/guest-token', [PresetController::class, 'guestToken']);
 /**
  * Ruta de prueba
  */
@@ -82,12 +86,10 @@ Route::get('/auctions/{id}', [AuctionController::class, 'show']);
 
 
 
-
-Route::get('/unity-files', [UnityFilesController::class, 'getUnityFiles']);
-
 // ==========================================
 // RUTAS PROTEGIDAS (requieren token)
 // ==========================================
+
 
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -101,56 +103,32 @@ Route::middleware('auth:sanctum')->group(function () {
     // USUARIO Y AUTENTICACIÓN
     // ------------------------------------------
     
-    /**
-     * Obtener usuario autenticado
-     */
+    /**Obtener usuario autenticado*/
     Route::get('/user', [AuthController::class, 'user']);
-    
-    /**
-     * Ruta solo para admin
-     */
+    /**Ruta solo para admin*/
     Route::get('/admin-only', [AuthController::class, 'adminOnly']);
-    
-    /**
-     * Logout
-     */
+    /**Logout*/
     Route::post('/logout', [AuthController::class, 'logout']);
-    
-    /**
-     * CRUD de usuarios
-     */
+    /**CRUD de usuarios*/
     Route::apiResource('users', UserController::class);
 
     // ------------------------------------------
     // GESTIÓN DE OBRAS
     // ------------------------------------------
-    
-    /**
-     * Artista sube obra
-     */
+    /**Artista sube obra*/
     Route::post('/obras', [ObraController::class, 'store']);
-    
-    /**
-     * Listar obras (admin o artista)
-     */
+    /**Listar obras (admin o artista)*/
     Route::get('/obras', [ObraController::class, 'index']);
-    
-    /**
-     * ✅ RUTAS ESPECÍFICAS PRIMERO (antes de rutas con parámetros)
-     */
+    /**✅ RUTAS ESPECÍFICAS PRIMERO (antes de rutas con parámetros)*/
     Route::get('/obras/pendientes', [ObraController::class, 'pendientes']); // Admin ve pendientes
     Route::get('/obras/aceptadas', [ObraController::class, 'aceptadas']);   // Obras aceptadas
     
-    /**
-     * ✅ RUTAS CON PARÁMETROS DESPUÉS
-     */
+    /**✅ RUTAS CON PARÁMETROS DESPUÉS*/
     Route::get('/obras/{id}', [ObraController::class, 'show']);             // Ver obra
     Route::put('/obras/{id}', [ObraController::class, 'update']);           // Admin acepta/rechaza
     Route::delete('/obras/{id}', [ObraController::class, 'destroy']);       // Admin elimina obra
 
-    /**
-     * Notificaciones y obras aprobadas
-     */
+    /**Notificaciones y obras aprobadas*/
     Route::get('/notifications/rejections', [ObraController::class, 'getRejectionMessages']);
     Route::get('/obras-pendientes', [ObraController::class, 'getNewPendingObras']);
     Route::get('/obras-aprobadas', [ObraController::class, 'obrasAprobadas']);
@@ -159,25 +137,15 @@ Route::middleware('auth:sanctum')->group(function () {
     // PERFIL
     // ------------------------------------------
     
-    /**
-     * Obtener perfil del usuario autenticado
-     */
+    /**Obtener perfil del usuario autenticado*/
     Route::get('/profile', [ProfileController::class, 'getProfile']);
     
-    /**
-     * Actualizar perfil
-     */
+    /**Actualizar perfil*/
     Route::put('/profile', [ProfileController::class, 'updateProfile']);
 
     // ------------------------------------------
-    // METABASE / DASHBOARD
+    // METABASE / DASHBOARD  Dashboard de Vartica
     // ------------------------------------------
-    
-    /**
-     * Dashboard de Vartica
-     */
-   
-
     // ------------------------------------------
     // 🆕 SUBASTAS - RUTAS PROTEGIDAS
     // ------------------------------------------
@@ -193,7 +161,6 @@ Route::middleware('auth:sanctum')->group(function () {
      * }
      */
     Route::post('/auctions', [AuctionController::class, 'store']);
-    
     /**
      * Realizar una puja en una subasta
      * Ejemplo: POST /api/auctions/1/bid
@@ -203,25 +170,28 @@ Route::middleware('auth:sanctum')->group(function () {
      * }
      */
     Route::post('/auctions/{id}/bid', [AuctionController::class, 'placeBid']);
-    
     /**
      * Finalizar una subasta manualmente (antes de tiempo)
      * Ejemplo: POST /api/auctions/1/finalize
      */
     Route::post('/auctions/{id}/finalize', [AuctionController::class, 'finalize']);
-    
     /**
      * Cancelar una subasta (solo si no tiene pujas)
      * Ejemplo: POST /api/auctions/1/cancel
      */
     Route::post('/auctions/{id}/cancel', [AuctionController::class, 'cancel']);
-
-    Route::get('/auctions/public', [AuctionController::class, 'publicAuctions']);
-
-    
+    Route::get('/auctions/public', [AuctionController::class, 'publicAuctions']);    
     /**
      * Obtener todas las pujas del usuario autenticado
      * Permite ver el historial de pujas realizadas
      */
     Route::get('/my-bids', [AuctionController::class, 'myBids']);
+
+    Route::get('/my-won-auctions', [AuctionController::class, 'myWonAuctions']);
+
+    Route::post('/auctions/{id}/pay', [AuctionController::class, 'processPayment']);
+    Route::get('/admin/auctions-report', [AuctionController::class, 'adminIndex']);
+
+     Route::post('/create-payment-intent/{id}', [PaymentController::class, 'createPaymentIntent']);
+
 });
