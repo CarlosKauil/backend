@@ -22,7 +22,7 @@ use Firebase\JWT\JWT;
 /*use App\Http\Controllers\Auth\FirebaseAuthController;
 */
 
-
+Route::get('/superset/guest-token', [SupersetController::class, 'getGuestToken']);
 
 Route::get('/plans', [SubscriptionController::class, 'indexPlans']);
 
