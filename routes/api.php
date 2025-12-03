@@ -31,6 +31,10 @@ Route::get('/plans', [SubscriptionController::class, 'indexPlans']);
 // RUTAS PÚBLICAS (sin autenticación)
 // ==========================================
 
+Route::get('/unity-files', [UnityFilesController::class, 'getUnityFiles']);   
+
+
+
 /**
  * Login con Firebase
  */
