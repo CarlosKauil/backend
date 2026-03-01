@@ -16,9 +16,9 @@ use App\Http\Controllers\SupersetController;
 use App\Http\Controllers\Api\PaymentController;
 
 use App\Http\Controllers\PresetController;
-use App\Http\Controllers\Api\SubscriptionController;
 use Firebase\JWT\JWT;
 
+use App\Http\Controllers\Api\StripeController;
 /*use App\Http\Controllers\Auth\FirebaseAuthController;
 */
 
@@ -33,7 +33,7 @@ Route::get('/plans', [SubscriptionController::class, 'indexPlans']);
 
 Route::get('/unity-files', [UnityFilesController::class, 'getUnityFiles']);   
 
-
+//RUTAS QUE NECESITAMOS PARA LOS PLANES DE SUSCRIPCIONES//===============================================================================
 
 /**
  * Login con Firebase
@@ -97,7 +97,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/subscription/change-plan', [SubscriptionController::class, 'changePlan']);
     Route::post('/subscription/cancel', [SubscriptionController::class, 'cancel']);
     Route::get('/admin/subscriptions', [SubscriptionController::class, 'adminIndex']);
-    
+
+    // ------------------------------------------
+    // STRIPE - RUTAS PROTEGIDAS (CORREGIDO)
+    // ------------------------------------------
+
+    //RUTA DE ACCESO AL CHECKOUT DE STRIPE EN BASE AL ID SUSCRIPCION Y USUARIO LOGEADO
+    Route::post('/stripe/checkout', [StripeController::class, 'checkout']);
+
+    //SOLO SI LO DE ARRIBA YA FUNCIONA
+    //RUTA DE ACCESO AL PORTAL DE FACTURACION EN BASE AL USUARIO LOGEADO
+    Route::post('/stripe/portal', [StripeController::class, 'billingPortal']);
+
+
     // ------------------------------------------
     // USUARIO Y AUTENTICACIÓN
     // ------------------------------------------
@@ -141,12 +153,11 @@ Route::middleware('auth:sanctum')->group(function () {
     
     /**Actualizar perfil*/
     Route::put('/profile', [ProfileController::class, 'updateProfile']);
-    // ------------------------------------------
-    // METABASE / DASHBOARD  Dashboard de Vartica
-    // ------------------------------------------
+
     // ------------------------------------------
     // 🆕 SUBASTAS - RUTAS PROTEGIDAS
     // ------------------------------------------
+
     /**Crear una nueva subasta*/
     Route::post('/auctions', [AuctionController::class, 'store']);
     /**
@@ -180,6 +191,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auctions/{id}/pay', [AuctionController::class, 'processPayment']);
     Route::get('/admin/auctions-report', [AuctionController::class, 'adminIndex']);
 
-     Route::post('/create-payment-intent/{id}', [PaymentController::class, 'createPaymentIntent']);
+    Route::post('/create-payment-intent/{id}', [PaymentController::class, 'createPaymentIntent']);
 
 });
