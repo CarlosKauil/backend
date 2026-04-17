@@ -10,14 +10,13 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail; // 📧 Para correos
-use App\Mail\PaymentReceived;        // 📧 Tu Mailable
-use Stripe\Stripe;                   // 💳 Stripe
-use Stripe\PaymentIntent;            // 💳 Stripe Intent
+use Illuminate\Support\Facades\Mail;
+use App\Mail\PaymentReceived;
+use Stripe\Stripe;
+use Stripe\PaymentIntent;
 
 class AuctionController extends Controller
 {
-    // Función reutilizable para validar conflictos de fechas
     protected function hasDateConflict($obraId, $fechaInicio, $fechaFin, $excludeId = null)
     {
         $query = Auction::where('obra_id', $obraId)
@@ -38,7 +37,6 @@ class AuctionController extends Controller
         return $query->exists();
     }
 
-    // Método para crear una nueva subasta
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -103,13 +101,14 @@ class AuctionController extends Controller
         }
 
         $validated = $request->validate([
-            'fecha_inicio' => 'nullable|date|after_or_equal:now',
-            'fecha_fin' => 'nullable|date|after:fecha_inicio',
-            'precio_inicial' => 'nullable|numeric|min:0.01',
+            'fecha_inicio'      => 'nullable|date|after_or_equal:now',
+            'fecha_fin'         => 'nullable|date|after:fecha_inicio',
+            'precio_inicial'    => 'nullable|numeric|min:0.01',
             'incremento_minimo' => 'nullable|numeric|min:1',
         ]);
+
         $nuevaInicio = isset($validated['fecha_inicio']) ? Carbon::parse($validated['fecha_inicio']) : $auction->fecha_inicio;
-        $nuevaFin = isset($validated['fecha_fin']) ? Carbon::parse($validated['fecha_fin']) : $auction->fecha_fin;
+        $nuevaFin    = isset($validated['fecha_fin'])    ? Carbon::parse($validated['fecha_fin'])    : $auction->fecha_fin;
 
         if ($this->hasDateConflict($auction->obra_id, $nuevaInicio, $nuevaFin, $auction->id)) {
             return response()->json(['error' => 'Conflicto de fechas con otra subasta'], 400);
@@ -122,7 +121,7 @@ class AuctionController extends Controller
 
     public function index(Request $request)
     {
-        $perPage = $request->input('per_page', 15);
+        $perPage  = $request->input('per_page', 15);
         $auctions = Auction::with(['obra.artist.user', 'bids.user'])
             ->where('estado', 'activa')
             ->where('fecha_fin', '>', Carbon::now())
@@ -131,7 +130,7 @@ class AuctionController extends Controller
 
         $auctions->getCollection()->transform(function ($auction) {
             $auction->tiempo_restante = $auction->tiempoRestante();
-            $auction->total_pujas = $auction->bids->count();
+            $auction->total_pujas     = $auction->bids->count();
             return $auction;
         });
 
@@ -153,57 +152,50 @@ class AuctionController extends Controller
             ], 400);
         }
 
-        $auction->update([
-            'fecha_fin' => Carbon::parse($validated['fecha_fin'])
-        ]);
+        $auction->update(['fecha_fin' => Carbon::parse($validated['fecha_fin'])]);
 
         return response()->json([
-            'message' => 'Hora límite actualizada exitosamente',
-            'auction' => $auction,
+            'message'         => 'Hora límite actualizada exitosamente',
+            'auction'         => $auction,
             'nueva_fecha_fin' => $auction->fecha_fin
         ]);
     }
 
     public function show($id)
     {
-        // Relaciones que necesitamos
         $relations = ['obra.artist.user', 'obra.area', 'bids.user', 'ganador'];
 
-        // 1. Intento buscar por ID de SUBASTA (lo normal)
         $auction = Auction::with($relations)->find($id);
 
-        // 2. Si es null, intento buscar por ID de OBRA (tu caso actual)
         if (!$auction) {
             $auction = Auction::with($relations)
                 ->where('obra_id', $id)
-                ->latest() // Por si esa obra ha tenido varias subastas, toma la última
+                ->latest()
                 ->first();
         }
 
-        // 3. Si sigue sin encontrar nada, entonces sí es un 404 real
         if (!$auction) {
-            return response()->json([
-                'error' => 'Subasta no encontrada'
-            ], 404);
+            return response()->json(['error' => 'Subasta no encontrada'], 404);
         }
 
-        $data = [
-            'id' => $auction->id,
-            'obra' => $auction->obra,
-            'precio_inicial' => $auction->precio_inicial,
-            'precio_actual' => $auction->precio_actual,
+        return response()->json([
+            'id'                => $auction->id,
+            'obra'              => $auction->obra,
+            'precio_inicial'    => $auction->precio_inicial,
+            'precio_actual'     => $auction->precio_actual,
             'incremento_minimo' => $auction->incremento_minimo,
-            'fecha_inicio' => $auction->fecha_inicio,
-            'fecha_fin' => $auction->fecha_fin,
-            'estado' => $auction->estado,
-            'tiempo_restante' => $auction->tiempoRestante(),
-            'is_activa' => $auction->isActiva(),
-            'ganador' => $auction->ganador,
-            'bids' => $auction->bids,
-            'total_pujas' => $auction->bids->count(),
-        ];
-
-        return response()->json($data);
+            'fecha_inicio'      => $auction->fecha_inicio,
+            'fecha_fin'         => $auction->fecha_fin,
+            'estado'            => $auction->estado,
+            'tiempo_restante'   => $auction->tiempoRestante(),
+            'is_activa'         => $auction->isActiva(),
+            'ganador'           => $auction->ganador,
+            'bids'              => $auction->bids,
+            'total_pujas'       => $auction->bids->count(),
+            'monto_ganador'     => $auction->monto_ganador,
+            'payment_deadline'  => $auction->payment_deadline,
+            'pago_status'       => $auction->pago_status,
+        ]);
     }
 
     public function placeBid(Request $request, $auctionId)
@@ -236,23 +228,23 @@ class AuctionController extends Controller
             if ($validated['monto'] < $montoMinimo) {
                 DB::rollBack();
                 return response()->json([
-                    'error' => "Alguien ha ofertado antes. El monto mínimo ahora es $" . number_format($montoMinimo, 2),
+                    'error'        => "Alguien ha ofertado antes. El monto mínimo ahora es $" . number_format($montoMinimo, 2),
                     'monto_minimo' => $montoMinimo
                 ], 409);
             }
 
             $bid = Bid::create([
                 'auction_id' => $auction->id,
-                'user_id' => auth()->id(),
-                'monto' => $validated['monto'],
+                'user_id'    => auth()->id(),
+                'monto'      => $validated['monto'],
                 'fecha_puja' => Carbon::now(),
             ]);
 
             $tiempoRestante = Carbon::now()->diffInMinutes($auction->fecha_fin, false);
-            $huboExtension = false;
+            $huboExtension  = false;
             if ($tiempoRestante <= 5 && $tiempoRestante >= 0) {
                 $auction->fecha_fin = Carbon::now()->addMinutes(5);
-                $huboExtension = true;
+                $huboExtension      = true;
             }
 
             $auction->precio_actual = $validated['monto'];
@@ -261,10 +253,10 @@ class AuctionController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Puja exitosa',
-                'bid' => $bid,
-                'nuevo_precio' => $auction->precio_actual,
-                'extended_time' => $huboExtension,
+                'message'         => 'Puja exitosa',
+                'bid'             => $bid,
+                'nuevo_precio'    => $auction->precio_actual,
+                'extended_time'   => $huboExtension,
                 'nueva_fecha_fin' => $auction->fecha_fin
             ], 201);
 
@@ -280,26 +272,34 @@ class AuctionController extends Controller
         $this->authorize('finalize', $auction);
 
         if ($auction->estado === 'finalizada') {
-            return response()->json([
-                'error' => 'Esta subasta ya fue finalizada'
-            ], 400);
+            return response()->json(['error' => 'Esta subasta ya fue finalizada'], 400);
         }
 
         $pujaMasAlta = $auction->bids()->orderBy('monto', 'desc')->first();
 
         $auction->update([
-            'estado' => 'finalizada',
-            'ganador_id' => $pujaMasAlta ? $pujaMasAlta->user_id : null,
+            'estado'           => 'finalizada',
+            'ganador_id'       => $pujaMasAlta ? $pujaMasAlta->user_id : null,
+            'monto_ganador'    => $pujaMasAlta ? $pujaMasAlta->monto   : null,
+            'payment_deadline' => $pujaMasAlta ? now()->addHours(24)   : null,
+            'pago_status'      => $pujaMasAlta ? 'pendiente'           : null,
         ]);
+
+        if ($pujaMasAlta) {
+            $auction->load('ganador');
+            $auction->ganador->notify(
+                new \App\Notifications\SubastaGanadaNotification($auction)
+            );
+        }
 
         $auction->load('ganador');
 
         return response()->json([
-            'message' => 'Subasta finalizada exitosamente',
-            'auction' => $auction,
-            'ganador' => $auction->ganador,
+            'message'      => 'Subasta finalizada exitosamente',
+            'auction'      => $auction,
+            'ganador'      => $auction->ganador,
             'precio_final' => $auction->precio_actual,
-            'total_pujas' => $auction->bids->count()
+            'total_pujas'  => $auction->bids->count()
         ]);
     }
 
@@ -314,9 +314,7 @@ class AuctionController extends Controller
             ], 400);
         }
 
-        $auction->update([
-            'estado' => 'cancelada'
-        ]);
+        $auction->update(['estado' => 'cancelada']);
 
         return response()->json([
             'message' => 'Subasta cancelada exitosamente',
@@ -324,6 +322,7 @@ class AuctionController extends Controller
         ]);
     }
 
+    // ✅ CORREGIDO: agrega auction_id al response
     public function myBids()
     {
         $bids = Bid::with(['auction.obra', 'auction.ganador'])
@@ -333,12 +332,13 @@ class AuctionController extends Controller
 
         $bids = $bids->map(function ($bid) {
             return [
-                'id' => $bid->id,
-                'monto' => $bid->monto,
-                'fecha_puja' => $bid->fecha_puja,
-                'obra' => $bid->auction->obra,
-                'subasta_estado' => $bid->auction->estado,
-                'es_ganadora' => $bid->esGanadora(),
+                'id'                 => $bid->id,
+                'auction_id'         => $bid->auction_id, // ✅ nuevo
+                'monto'              => $bid->monto,
+                'fecha_puja'         => $bid->fecha_puja,
+                'obra'               => $bid->auction->obra,
+                'subasta_estado'     => $bid->auction->estado,
+                'es_ganadora'        => $bid->esGanadora(),
                 'subasta_finalizada' => $bid->auction->estado === 'finalizada',
             ];
         });
@@ -346,12 +346,11 @@ class AuctionController extends Controller
         return response()->json($bids);
     }
 
-    // Obtener las subastas que el usuario autenticado ha ganado
     public function myWonAuctions()
     {
         $userId = Auth::id();
 
-        $wonAuctions = Auction::with(['obra.artist.user', 'obra.area']) // Incluimos obra.area
+        $wonAuctions = Auction::with(['obra.artist.user', 'obra.area'])
             ->where('ganador_id', $userId)
             ->where('estado', 'finalizada')
             ->orderBy('updated_at', 'desc')
@@ -364,61 +363,50 @@ class AuctionController extends Controller
     // 💳 MÉTODOS DE PAGO (STRIPE)
     // ==========================================
 
-    /**
-     * Paso 1: Crear la Intención de Pago en Stripe
-     * Calcula comisiones y retorna el ClientSecret al frontend
-     */
     public function createPaymentIntent(Request $request, $auctionId)
     {
-        $user = Auth::user();
+        $user    = Auth::user();
         $auction = Auction::with('obra')->findOrFail($auctionId);
 
-        // Seguridad
         if ($auction->ganador_id !== $user->id) {
             return response()->json(['error' => 'No autorizado'], 403);
         }
         if ($auction->pago_status === 'pagado') {
             return response()->json(['error' => 'Esta subasta ya fue pagada'], 400);
         }
+        if (now()->isAfter($auction->payment_deadline)) {
+            return response()->json(['error' => 'El plazo de pago ha vencido'], 410);
+        }
 
-        // --- CÁLCULO DE PRECIOS ---
-        $subtotal = $auction->precio_actual;
-        
-        // Comisión Stripe México estándar: 3.6% + $3.00 MXN
-        $tasa = 0.036; 
-        $fijo = 3.00;
-        
-        $comisionBase = ($subtotal * $tasa) + $fijo;
-        $ivaComision = $comisionBase * 0.16; // IVA del 16% sobre la comisión
-        
+        $subtotal      = $auction->monto_ganador ?? $auction->precio_actual;
+        $tasa          = 0.036;
+        $fijo          = 3.00;
+        $comisionBase  = ($subtotal * $tasa) + $fijo;
+        $ivaComision   = $comisionBase * 0.16;
         $comisionTotal = $comisionBase + $ivaComision;
-        $total = $subtotal + $comisionTotal;
-
-        // Stripe usa centavos
+        $total         = $subtotal + $comisionTotal;
         $amountInCents = round($total * 100);
 
         try {
-            Stripe::setApiKey(env('STRIPE_SECRET'));
+            Stripe::setApiKey(config('services.stripe.secret'));
 
             $paymentIntent = PaymentIntent::create([
-                'amount' => $amountInCents,
+                'amount'   => $amountInCents,
                 'currency' => 'mxn',
-                'automatic_payment_methods' => [
-                    'enabled' => true,
-                ],
+                'automatic_payment_methods' => ['enabled' => true],
                 'metadata' => [
                     'auction_id' => $auction->id,
-                    'user_id' => $user->id,
-                    'obra' => $auction->obra->nombre
+                    'user_id'    => $user->id,
+                    'obra'       => $auction->obra->nombre ?? 'Sin título',
                 ],
             ]);
 
             return response()->json([
                 'clientSecret' => $paymentIntent->client_secret,
-                'breakdown' => [
+                'breakdown'    => [
                     'subtotal' => $subtotal,
                     'comision' => $comisionTotal,
-                    'total' => $total
+                    'total'    => $total,
                 ]
             ]);
 
@@ -427,10 +415,6 @@ class AuctionController extends Controller
         }
     }
 
-    /**
-     * Paso 2: Confirmar el Pago y Guardar en BD
-     * Se llama después de que Stripe confirma el éxito en el frontend
-     */
     public function processPayment(Request $request, $auctionId)
     {
         $auction = Auction::with(['obra.artist', 'ganador'])->findOrFail($auctionId);
@@ -438,24 +422,20 @@ class AuctionController extends Controller
         if ($auction->ganador_id !== Auth::id()) {
             return response()->json(['error' => 'No autorizado'], 403);
         }
-
         if ($auction->pago_status === 'pagado') {
             return response()->json(['error' => 'Esta subasta ya fue pagada'], 400);
         }
 
         DB::beginTransaction();
         try {
-            // Recibimos el ID de transacción real de Stripe (o simulado si no hay)
             $transactionId = $request->input('transaction_id', 'TRX-' . strtoupper(uniqid()));
 
-            // 1. Actualizar BD
             $auction->update([
-                'pago_status' => 'pagado',
-                'fecha_pago' => Carbon::now(),
+                'pago_status'    => 'pagado',
+                'fecha_pago'     => Carbon::now(),
                 'transaccion_id' => $transactionId,
             ]);
-            
-            // 2. ENVIAR CORREO (Si falla el correo, no revertimos el pago, solo logueamos)
+
             try {
                 Mail::to($auction->ganador->email)->send(new PaymentReceived($auction));
             } catch (\Exception $emailError) {
@@ -475,7 +455,6 @@ class AuctionController extends Controller
         }
     }
 
-    // Obtener reporte completo para el Administrador
     public function adminIndex(Request $request)
     {
         $user = Auth::user();
@@ -483,19 +462,19 @@ class AuctionController extends Controller
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
-        $auctions = Auction::with(['obra.area', 'ganador']) // Incluimos area para el dashboard
+        $auctions = Auction::with(['obra.area', 'ganador'])
             ->orderBy('created_at', 'desc')
             ->get();
 
         $stats = [
-            'total_ventas' => $auctions->where('pago_status', 'pagado')->sum('precio_actual'),
+            'total_ventas'    => $auctions->where('pago_status', 'pagado')->sum('precio_actual'),
             'pendientes_pago' => $auctions->where('estado', 'finalizada')->where('pago_status', '!=', 'pagado')->count(),
-            'activas' => $auctions->where('estado', 'activa')->count(),
+            'activas'         => $auctions->where('estado', 'activa')->count(),
         ];
 
         return response()->json([
             'auctions' => $auctions,
-            'stats' => $stats
+            'stats'    => $stats
         ]);
     }
 }

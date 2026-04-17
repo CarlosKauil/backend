@@ -1,7 +1,7 @@
 <?php
 return [
     'supports_credentials' => true,
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'login', 'logout', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
@@ -13,6 +13,8 @@ return [
         'https://backend-z57u.onrender.com',
         'https://rmgdbkm3-8000.usw3.devtunnels.ms',
         'https://vtc-back.pages.dev',
+        'http://127.0.0.1:8000',
+        
     ],
 
     'allowed_origins_patterns' => [],
