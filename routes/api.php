@@ -93,6 +93,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auctions/{id}/cancel', [AuctionController::class, 'cancel']);
     Route::post('/auctions/{id}/pay', [AuctionController::class, 'processPayment']);
    Route::post('/create-payment-intent/{id}', [AuctionController::class, 'createPaymentIntent']);
+   Route::get('/my-purchases', [AuctionController::class, 'myPurchases']);
 });
 
 Route::post('/stripe/webhook', [WebhookController::class, 'handleWebhook']);
